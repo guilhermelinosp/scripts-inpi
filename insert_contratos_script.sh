@@ -34,8 +34,8 @@ if [[ -n "$latestDirectory" ]]; then
             # Example: Escape single quotes in XML content for SQL compatibility
             xmlContentEscaped=$(echo "${xmlContent}" | sed "s/'/''/g")
 
-            # Example: Construct SQL command to insert XML content
-            sql_command="EXEC dbo.SP_INSERT_XML_CONTRATOS @Revista='$(basename "${latestDirectory}")', @XmlContent='${xmlContentEscaped}';"
+            # Example: Construct SQL command to insert XML content into a table
+            sql_command="INSERT INTO YourTable (Revista, Data, XmlContent) VALUES ('$(basename "${latestDirectory}")', GETDATE(), '${xmlContentEscaped}')"
 
             # Execute SQL command using sqlcmd
             sqlcmd -S "${DB_HOST},${DB_PORT}" -d "${DB_NAME}" -U "${DB_USER}" -P "${DB_PASSWORD}" -Q "${sql_command}"
