@@ -15,29 +15,32 @@ if [ ! -d "$DIR_CONTRATOS" ]; then
     exit 1
 fi
 
-# Find the latest directory inside $DIR_CONTRATOS more efficiently
-latestDirectory=$(find "$DIR_CONTRATOS" -type d -printf '%T+ %p\n' | sort -r | head -n 1 | cut -d' ' -f2-)
+# Find the latest directory inside $DIR_CONTRATOS using ls and sort
+latestDirectory=$(ls -td "$DIR_CONTRATOS"/*/ | head -n 1)
 
-if [ -n "$latestDirectory" ]; then
+if [[ -n "$latestDirectory" ]]; then
     # Find XML files in the latest directory
-    readarray -t xmlFiles < <(find "$latestDirectory" -maxdepth 1 -name "*.xml")
+    xmlFiles=($(ls -1 "${latestDirectory}"/*.xml 2>/dev/null))
 
-    if [ ${#xmlFiles[@]} -gt 0 ]; then
-        for xmlFile in "${xmlFiles[@]}"; do
-            echo "Processing XML file: $xmlFile"
+    if [[ ${#xmlFiles[@]} -gt 0 ]]; then
+        for xmlFile in "${xmlFiles[@]}"
+        do
+            # Process each XML file
+            echo "Processing XML file: ${xmlFile}"
 
-            xmlContent=$(awk '/<despacho>/,/<\/despacho>/' "$xmlFile")
-            xmlContentEscaped=$(echo "$xmlContent" | sed "s/'/''/g")
+            # Example of extracting XML content using awk (replace with your logic)
+            xmlContent=$(awk '/<despacho>/,/<\/despacho>/' "${xmlFile}")
 
-            # Improved readability for SQL command construction
-            sql_command="EXEC dbo.SP_INSERT_XML_CONTRATOS @Revista='$(basename "$latestDirectory")', @XmlContent='$xmlContentEscaped'"
+            # Example: Escape single quotes in XML content for SQL compatibility
+            xmlContentEscaped=$(echo "${xmlContent}" | sed "s/'/''/g")
 
-            if ! sqlcmd -S "${DB_HOST},${DB_PORT}" -d "${DB_NAME}" -U "${DB_USER}" -P "${DB_PASSWORD}" -Q "$sql_command"; then
-                echo "Failed to insert XML $xmlFile into database."
-                continue
-            fi
+            # Example: Construct SQL command to insert XML content
+            sql_command="EXEC dbo.SP_INSERT_XML_CONTRATOS @Revista='$(basename "${latestDirectory}")', @XmlContent='${xmlContentEscaped}';"
 
-            echo "Inserted XML $xmlFile into database."
+            # Execute SQL command using sqlcmd
+            sqlcmd -S "${DB_HOST},${DB_PORT}" -d "${DB_NAME}" -U "${DB_USER}" -P "${DB_PASSWORD}" -Q "${sql_command}"
+
+            echo "Inserted XML ${xmlFile} into database."
         done
 
         echo "Script execution completed."
