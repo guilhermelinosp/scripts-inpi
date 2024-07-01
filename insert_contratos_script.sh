@@ -1,18 +1,17 @@
 #!/bin/bash
 
+# Check if .env file exists
 if [ ! -f .env ]; then
-  echo ".env not found."
-  exit 1
+    echo ".env not found."
+    exit 1
 fi
 
-# Load environment variables from .env file more reliably
-while IFS='=' read -r key value; do
-  export "$key=$value"
-done < .env
+# Load environment variables from .env file
+export $(cat .env | xargs)
 
-# Check if the contracts directory exists and DIR_CONTRATOS is set
-if [ -z "$DIR_CONTRATOS" ] || [ ! -d "$DIR_CONTRATOS" ]; then
-    echo "Contracts directory not found or DIR_CONTRATOS not set: $DIR_CONTRATOS"
+# Check if the contracts directory exists
+if [ ! -d "$DIR_CONTRATOS" ]; then
+    echo "Contracts directory not found: $DIR_CONTRATOS"
     exit 1
 fi
 
