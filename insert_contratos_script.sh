@@ -39,13 +39,8 @@ if [[ -n "$latestDirectory" ]]; then
             # Example: Construct SQL command to insert XML content into a table
             sql_command="INSERT INTO dbo.TB_XML_CONTRATOS (Revista, Data, XmlContent) VALUES ('${Revista}', '${Date}', '${xmlContentEscaped}')"
 
-            # Construct SQL connection string
-            sqlconnection="-S ${DB_HOST},${DB_PORT} -d ${DB_NAME} -U ${DB_USER} -P ${DB_PASSWORD}"
-
-            echo "SQL connection: ${sqlconnection}"
-
             # Execute SQL command using sqlcmd
-            sqlcmd ${sqlconnection} -Q "${sql_command}"
+            sqlcmd ${"-S ${DB_HOST},${DB_PORT} -d ${DB_NAME} -U ${DB_USER} -P ${DB_PASSWORD}"} -Q "${sql_command}"
 
             echo "Inserted XML ${xmlFile} into database."
         done
