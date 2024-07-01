@@ -34,7 +34,7 @@ if [[ -n "$latestDirectory" ]]; then
             xmlContentEscaped=$(echo "${xmlContent}" | sed "s/'/''/g")
 
             # Example: Construct SQL command to insert XML content into database
-            sql_command="EXEC dbo.SP_INSERT_XML_CONTRATOS @Revista='$(basename ${latestDirectory})', @Data=GETDATE(), @XmlContent='${xmlContentEscaped}';"
+            sql_command="EXEC dbo.SP_INSERT_XML_CONTRATOS @Revista='$(basename "${latestDirectory}")', @Data=GETDATE(), @XmlContent='${xmlContentEscaped}'"
 
             # Example: Execute SQL command using sqlcmd (replace with your database command)
             sqlcmd -S "${DB_HOST},${DB_PORT}" -d "${DB_NAME}" -U "${DB_USER}" -P "${DB_PASSWORD}" -Q "${sql_command}"
