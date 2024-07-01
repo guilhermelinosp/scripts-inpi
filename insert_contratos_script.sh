@@ -39,10 +39,16 @@ if [[ -n "$latestDirectory" ]]; then
             # Example: Construct SQL command to insert XML content into a table
             sql_command="INSERT INTO dbo.TB_XML_CONTRATOS (Revista, Data, XmlContent) VALUES ('${Revista}', '${Date}', '${xmlContentEscaped}')"
 
-            # Execute SQL command using sqlcmd
-            sqlcmd ${"-S ${DB_HOST},${DB_PORT} -d ${DB_NAME} -U ${DB_USER} -P ${DB_PASSWORD}"} -Q "${sql_command}"
+            echo "SQL command: ${sql_command}"
 
-            echo "Inserted XML ${xmlFile} into database."
+            # Construct SQL connection string and execute SQL command using sqlcmd
+            sqlcmd -S "${DB_HOST},${DB_PORT}" -d "${DB_NAME}" -U "${DB_USER}" -P "${DB_PASSWORD}" -Q "${sql_command}"
+
+            if [ $? -eq 0 ]; then
+                echo "Inserted XML ${xmlFile} into database."
+            else
+                echo "Failed to insert XML ${xmlFile} into database."
+            fi
         done
 
         echo "Script execution completed."
