@@ -5,41 +5,40 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-# Load environment variables from .env file
-export $(cat .env | xargs)
+# Load environment variables from .env file more reliably
+while IFS='=' read -r key value; do
+  export "$key=$value"
+done < .env
 
-# Check if the contracts directory exists
-if [ ! -d "$DIR_CONTRATOS" ]; then
-    echo "Contracts directory not found: $DIR_CONTRATOS"
+# Check if the contracts directory exists and DIR_CONTRATOS is set
+if [ -z "$DIR_CONTRATOS" ] || [ ! -d "$DIR_CONTRATOS" ]; then
+    echo "Contracts directory not found or DIR_CONTRATOS not set: $DIR_CONTRATOS"
     exit 1
 fi
 
-# Find the latest directory inside $DIR_CONTRATOS
-latestDirectory=$(ls -d "$DIR_CONTRATOS"/*/ | sort -n | tail -n 1)
+# Find the latest directory inside $DIR_CONTRATOS more efficiently
+latestDirectory=$(find "$DIR_CONTRATOS" -type d -printf '%T+ %p\n' | sort -r | head -n 1 | cut -d' ' -f2-)
 
-if [[ -n "$latestDirectory" ]]; then
+if [ -n "$latestDirectory" ]; then
     # Find XML files in the latest directory
-    xmlFiles=($(find ${latestDirectory} -maxdepth 1 -name "*.xml"))
+    readarray -t xmlFiles < <(find "$latestDirectory" -maxdepth 1 -name "*.xml")
 
-    if [[ ${#xmlFiles[@]} -gt 0 ]]; then
-        for xmlFile in "${xmlFiles[@]}"
-        do
-            # Process each XML file
-            echo "Processing XML file: ${xmlFile}"
+    if [ ${#xmlFiles[@]} -gt 0 ]; then
+        for xmlFile in "${xmlFiles[@]}"; do
+            echo "Processing XML file: $xmlFile"
 
-            # Example of extracting XML content using awk (replace with your logic)
-            xmlContent=$(awk '/<despacho>/,/<\/despacho>/' "${xmlFile}")
+            xmlContent=$(awk '/<despacho>/,/<\/despacho>/' "$xmlFile")
+            xmlContentEscaped=$(echo "$xmlContent" | sed "s/'/''/g")
 
-            # Example: Escape single quotes in XML content (replace with appropriate escaping)
-            xmlContentEscaped=$(echo "${xmlContent}" | sed "s/'/''/g")
+            # Improved readability for SQL command construction
+            sql_command="EXEC dbo.SP_INSERT_XML_CONTRATOS @Revista='$(basename "$latestDirectory")', @XmlContent='$xmlContentEscaped'"
 
-            # Example: Construct SQL command to insert XML content into database
-            sql_command="EXEC dbo.SP_INSERT_XML_CONTRATOS @Revista='$(basename "${latestDirectory}")', @Data=GETDATE(), @XmlContent='${xmlContentEscaped}'"
+            if ! sqlcmd -S "${DB_HOST},${DB_PORT}" -d "${DB_NAME}" -U "${DB_USER}" -P "${DB_PASSWORD}" -Q "$sql_command"; then
+                echo "Failed to insert XML $xmlFile into database."
+                continue
+            fi
 
-            # Example: Execute SQL command using sqlcmd (replace with your database command)
-            sqlcmd -S "${DB_HOST},${DB_PORT}" -d "${DB_NAME}" -U "${DB_USER}" -P "${DB_PASSWORD}" -Q "${sql_command}"
-
-            echo "Inserted XML ${xmlFile} into database."
+            echo "Inserted XML $xmlFile into database."
         done
 
         echo "Script execution completed."
