@@ -31,7 +31,7 @@ process_xml_files() {
             echo "Processing XML file: ${xmlFile}"
             local xmlContent=$(awk '/<despacho>/,/<\/despacho>/' "${xmlFile}")
             local xmlContentEscaped=$(echo "${xmlContent}" | sed "s/'/''/g")
-            local sql_command="INSERT INTO dbo.TB_XML_CONTRATOS (Revista, Data, XmlContent) VALUES ('${Revista}', '${Date}', '${xmlContentEscaped}')"
+            local sql_command="INSERT INTO [dbo].[TB_XML_CONTRATOS] (Revista, Data, XmlContent) VALUES ('${Revista}', '${Date}', '${xmlContentEscaped}')"
 
             # Execute SQL command using sqlcmd
             if ! sqlcmd -S "${DB_HOST},${DB_PORT}" -d "${DB_NAME}" -U "${DB_USER}" -P "${DB_PASSWORD}" -Q "${sql_command}"; then
