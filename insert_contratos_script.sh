@@ -1,34 +1,51 @@
 #!/bin/bash
 
 if [ ! -f .env ]; then
-  echo ".ENV não encontrado"
+  echo ".env not found."
   exit 1
-else
-  export $(cat .env | xargs)
 fi
 
+# Load environment variables from .env file
+export $(cat .env | xargs)
+
+# Check if the contracts directory exists
 if [ ! -d "$DIR_CONTRATOS" ]; then
-    echo "Diretório não encontrado."
+    echo "Contracts directory not found: $DIR_CONTRATOS"
     exit 1
 fi
 
-maior_pasta=$(ls -d "$DIR_CONTRATOS"/*/ | sort -n | tail -n 1)
+# Find the latest directory inside $DIR_CONTRATOS
+latestDirectory=$(ls -d "$DIR_CONTRATOS"/*/ | sort -n | tail -n 1)
 
-if [[ -n "$maior_pasta" ]]; then
-    xml_file=$(find "$maior_pasta" -type f -name "*.xml")
+if [[ -n "$latestDirectory" ]]; then
+    # Find XML files in the latest directory
+    xmlFiles=($(find ${latestDirectory} -maxdepth 1 -name "*.xml"))
 
-    if [[ -f "$xml_file" ]]; then
-        xmllint --format "$xml_file" | xmllint --xpath '//despacho' - | while IFS= read -r despacho; do
-            despacho=$(echo "$despacho" | tr -d '\n' | tr -d '\r')
+    if [[ ${#xmlFiles[@]} -gt 0 ]]; then
+        for xmlFile in "${xmlFiles[@]}"
+        do
+            # Process each XML file
+            echo "Processing XML file: ${xmlFile}"
 
-            sqlcmd -S "$DB_HOST,$DB_PORT" -d "CONTRATOS" -U "$DB_USER" -P "$DB_PASSWORD" \
-                -Q "EXEC SP_INSERT_XML_CONTRATOS '$(basename "$maior_pasta")', '$(date +'%Y-%m-%d')', '$despacho';"
+            # Example of extracting XML content using awk (replace with your logic)
+            xmlContent=$(awk '/<despacho>/,/<\/despacho>/' "${xmlFile}")
 
-            echo "Inserção do XML $xml_file no banco de dados concluída."
+            # Example: Escape single quotes in XML content (replace with appropriate escaping)
+            xmlContentEscaped=$(echo "${xmlContent}" | sed "s/'/''/g")
+
+            # Example: Construct SQL command to insert XML content into database
+            sql_command="EXEC dbo.SP_INSERT_XML_CONTRATOS @Revista='$(basename ${latestDirectory})', @Data=GETDATE(), @XmlContent='${xmlContentEscaped}';"
+
+            # Example: Execute SQL command using sqlcmd (replace with your database command)
+            sqlcmd -S "${DB_HOST},${DB_PORT}" -d "${DB_NAME}" -U "${DB_USER}" -P "${DB_PASSWORD}" -Q "${sql_command}"
+
+            echo "Inserted XML ${xmlFile} into database."
         done
+
+        echo "Script execution completed."
     else
-        echo "Nenhum arquivo XML encontrado em $maior_pasta."
+        echo "No XML files found in $latestDirectory."
     fi
 else
-    echo "Nenhum diretório encontrado em $DIR_CONTRATOS."
+    echo "No directories found in $DIR_CONTRATOS."
 fi
