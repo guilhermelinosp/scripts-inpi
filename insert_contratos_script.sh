@@ -40,7 +40,7 @@ if [[ -n "$latestDirectory" ]]; then
             sql_command="INSERT INTO dbo.XML (Revista, Data, XmlContent) VALUES ('${Revista}', '${Data}', '${xmlContentEscaped}')"
 
             # Construct SQL connection string and execute SQL command using sqlcmd
-            sqlcmd -S "${DB_HOST},${DB_PORT}" -d "${DB_NAME}" -U "${DB_USER}" -P "${DB_PASSWORD}" -Q "${sql_command}"
+            sqlcmd -S "${DB_HOST},${DB_PORT}" -d CONTRATOS -U "${DB_USER}" -P "${DB_PASSWORD}" -Q "${sql_command}"
 
             if [ $? -eq 0 ]; then
                 echo "Inserted XML ${xmlFile} into database."
