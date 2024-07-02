@@ -28,7 +28,7 @@ if [[ -n "$latestDirectory" ]]; then
             echo "Processing XML file: ${xmlFile}"
 
             # Example of extracting XML content using awk (replace with your logic)
-            xmlContent=$(awk '/<despacho>/,/<\/despacho>/' "${xmlFile}")
+            xmlContent=$(awk '/<processo>/,/<\/processo>/' "${xmlFile}")
 
             # Example: Escape single quotes in XML content for SQL compatibility
             xmlContentEscaped=$(echo "${xmlContent}" | sed "s/'/''/g")
