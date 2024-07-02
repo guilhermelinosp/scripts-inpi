@@ -42,17 +42,6 @@ if [[ -n "$latestDirectory" ]]; then
 
             # Construct SQL connection string and execute SQL command using sqlcmd
             sqlcmd -S "${DB_HOST},${DB_PORT}" -d CONTRATOS -U "${DB_USER}" -P "${DB_PASSWORD}" -Q "${sql_command}"
-            if [ $? -eq 0 ]; then
-                echo "Inserted XML ${xmlFile} into database."
-            else
-                echo "Failed to insert XML ${xmlFile} into database."
-            fi
-
-            if [ $? -eq 0 ]; then
-                echo "Inserted XML ${xmlFile} into database."
-            else
-                echo "Failed to insert XML ${xmlFile} into database."
-            fi
         done
 
         echo "Script execution completed."

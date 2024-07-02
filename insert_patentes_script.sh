@@ -1,45 +1,53 @@
 #!/bin/bash
 
-# Definição das variáveis de conexão com o banco de dados
-DB_HOST="inpi.database.windows.net"
-DB_PORT="1433"
-DB_NAME="PROGRAMAS"
-DB_USER="inpi"
-DB_PASSWORD="!@#N3w0@"
-
-# Diretório onde estão localizados os arquivos XML
-XML_DIR="/home/ubuntu/INPI/PROGRAMAS"
-
-# Verificar se o diretório existe e pode ser acessado
-if [ ! -d "$XML_DIR" ]; then
-    echo "Diretório PROGRAMAS não encontrado."
+# Check if .env file exists
+if [ ! -f .env ]; then
+    echo ".env not found."
     exit 1
 fi
 
-# Inicializar um array para armazenar os despachos
-declare -a despachos_array
+# Load environment variables from .env file
+export $(cat .env | xargs)
 
-# Obter o último diretório com maior número
-maior_pasta=$(ls -d "$XML_DIR"/*/ | sort -n | tail -n 1)
+# Check if the contracts directory exists
+if [ ! -d "$DIR_PATENTES" ]; then
+    echo "directory not found: $DIR_PATENTES"
+    exit 1
+fi
 
-if [[ -n "$maior_pasta" ]]; then
-    # Iterar sobre todos os arquivos XML no diretório mais recente
-    for xml_file in "$maior_pasta"/*.xml; do
-        if [[ -f "$xml_file" ]]; then
-            # Extrair o conteúdo XML do arquivo usando xmlstarlet
-            xml_content=$(xmlstarlet sel -t -c "/despacho" "$xml_file")
+# Find the latest directory inside $DIR_PATENTES using ls and sort
+latestDirectory=$(ls -td "$DIR_PATENTES"/*/ | head -n 1)
 
-            # Nome do diretório (Revista) e data atual (apenas data, sem hora) para inclusão na tabela
-            REVISTA=$(basename "$maior_pasta")
-            DATA=$(date +'%Y-%m-%d')
+if [[ -n "$latestDirectory" ]]; then
+    # Find XML files in the latest directory
+    xmlFiles=($(ls -1 "${latestDirectory}"/*.xml 2>/dev/null))
 
-            # Chamar a procedure no SQL Server para enviar cada XML individualmente
-            /opt/mssql-tools/bin/sqlcmd -S "$DB_HOST,$DB_PORT" -d "$DB_NAME" -U "$DB_USER" -P "$DB_PASSWORD" \
-                -Q "EXEC SP_INSERT_XML '$REVISTA', '$DATA', '$xml_content';"
+    if [[ ${#xmlFiles[@]} -gt 0 ]]; then
+        for xmlFile in "${xmlFiles[@]}"; do
+            # Process each XML file
+            echo "Processing XML file: ${xmlFile}"
 
-            echo "Inserção do XML $xml_file no banco de dados concluída."
-        fi
-    done
+            # Example of extracting XML content using awk (replace with your logic)
+            xmlContent=$(awk '/<despacho>/,/<\/despacho>/' "${xmlFile}")
+
+            # Example: Escape single quotes in XML content for SQL compatibility
+            xmlContentEscaped=$(echo "${xmlContent}" | sed "s/'/''/g")
+
+            # Example: Construct SQL command to insert XML content into a table
+            # Get the basename of the latest directory
+            latestDirName=$(basename "${latestDirectory}")
+
+            # Correctly construct SQL command to call stored procedure with parameters
+            sql_command="EXEC dbo.SP_INSERT_XML_PATENTES '${latestDirName}', '${xmlContentEscaped}'"
+
+            # Construct SQL connection string and execute SQL command using sqlcmd
+            sqlcmd -S "${DB_HOST},${DB_PORT}" -d PATENTES -U "${DB_USER}" -P "${DB_PASSWORD}" -Q "${sql_command}"
+        done
+
+        echo "Script execution completed."
+    else
+        echo "No XML files found in $latestDirectory."
+    fi
 else
-    echo "Nenhum diretório encontrado em $XML_DIR."
+    echo "No directories found in $DIR_PATENTES."
 fi
